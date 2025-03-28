@@ -92,3 +92,108 @@ re.search() → Checks if the pattern exists in the text.
 
 Would you like this customized further for specific cases?
 
+
+
+
+
+
+
+
+
+It looks like you're trying to filter and categorize the data into four different scenarios based on the FeatureHasLabel and StoryHasLabel flags. Here's a structured breakdown of how you can achieve this in Python using pandas:
+
+Steps:
+
+1. Read the CSV file.
+
+
+2. Group stories by FeatureId.
+
+
+3. Filter data into four categories:
+
+Tab 1: Features where FeatureHasLabel == True, but all corresponding stories have StoryHasLabel == False.
+
+Tab 2: Stories where FeatureHasLabel == False, but at least one corresponding story has StoryHasLabel == True.
+
+Tab 3: Features and stories where both FeatureHasLabel and StoryHasLabel are either True or False.
+
+Tab 4: (Possibly another combination—please specify.)
+
+
+
+4. Save the results into an Excel file with multiple tabs.
+
+
+
+
+---
+
+Python Code:
+
+import pandas as pd
+
+# Load CSV
+df = pd.read_csv("your_file.csv")
+
+# Group by FeatureId to check corresponding stories
+grouped = df.groupby("FeatureId")
+
+# Scenario 1: FeatureHasLabel == True, but all corresponding stories have StoryHasLabel == False
+tab1 = df[
+    (df["FeatureHasLabel"] == True) & 
+    (~df["FeatureId"].isin(grouped.filter(lambda x: x["StoryHasLabel"].any())["FeatureId"]))
+]
+
+# Scenario 2: FeatureHasLabel == False, but at least one story has StoryHasLabel == True
+tab2 = df[
+    (df["FeatureHasLabel"] == False) & 
+    (df["FeatureId"].isin(grouped.filter(lambda x: x["StoryHasLabel"].any())["FeatureId"]))
+]
+
+# Scenario 3: Both FeatureHasLabel and StoryHasLabel are either True or False
+tab3 = df[
+    ((df["FeatureHasLabel"] == True) & (df["StoryHasLabel"] == True)) |
+    ((df["FeatureHasLabel"] == False) & (df["StoryHasLabel"] == False))
+]
+
+# Scenario 4: Define what you want here
+tab4 = df  # Modify as needed
+
+# Save to Excel with multiple tabs
+with pd.ExcelWriter("filtered_data.xlsx") as writer:
+    tab1.to_excel(writer, sheet_name="Tab1_FeatureTrue_StoryFalse", index=False)
+    tab2.to_excel(writer, sheet_name="Tab2_FeatureFalse_StoryTrue", index=False)
+    tab3.to_excel(writer, sheet_name="Tab3_BothTrueOrBothFalse", index=False)
+    tab4.to_excel(writer, sheet_name="Tab4_Custom", index=False)
+
+
+---
+
+Expected Output:
+
+Tab 1: Features with FeatureHasLabel == True, but none of its stories have StoryHasLabel == True.
+
+Tab 2: Stories where FeatureHasLabel == False, but at least one story has StoryHasLabel == True.
+
+Tab 3: Rows where both FeatureHasLabel and StoryHasLabel are either True or False.
+
+Tab 4: (Currently all data, you can modify this condition as needed.)
+
+
+
+---
+
+Questions:
+
+1. What should Tab 4 contain? Would you like to filter a specific scenario?
+
+
+2. Should the final Excel file include all columns from the CSV or only relevant ones?
+
+
+
+Let me know if you need any modifications!
+
+
+
