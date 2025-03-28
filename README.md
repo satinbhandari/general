@@ -1,4 +1,4 @@
-If you want to override both the default headers and model in your derived class while extending ChatOpenAI, you can modify the headers and model attributes inside the subclass constructor.
+9If you want to override both the default headers and model in your derived class while extending ChatOpenAI, you can modify the headers and model attributes inside the subclass constructor.
 
 
 ---
@@ -49,4 +49,46 @@ print(chat.headers)     # Output: Custom headers dictionary
 ✔️ The class remains flexible and supports extra arguments via **kwargs.
 
 Would you like to further customize behavior (e.g., dynamic model selection, extra logging)?
+
+
+
+
+
+
+To check if a word exists in another string as an exact match (without being part of another word), you can use regular expressions (re module) in Python.
+
+
+---
+
+Solution: Use re.search() with Word Boundaries (\b)
+
+The \b ensures that SATIN is treated as a whole word, not part of another word like NOSATIN or SATINIZED.
+
+import re
+
+def contains_exact_word(text, word):
+    pattern = rf"\b{re.escape(word)}\b"  # \b ensures exact word match
+    return bool(re.search(pattern, text))
+
+# Examples
+print(contains_exact_word("This is a SATIN fabric.", "SATIN"))    # ✅ True
+print(contains_exact_word("This is NOSATIN fabric.", "SATIN"))    # ❌ False
+print(contains_exact_word("This is SATINIZED fabric.", "SATIN"))  # ❌ False
+print(contains_exact_word("SATIN is great.", "SATIN"))            # ✅ True
+
+
+---
+
+Explanation:
+
+\b → Word boundary (ensures SATIN is a separate word).
+
+re.escape(word) → Escapes special characters if any.
+
+re.search() → Checks if the pattern exists in the text.
+
+
+✅ This method ensures that only exact whole-word matches are found.
+
+Would you like this customized further for specific cases?
 
