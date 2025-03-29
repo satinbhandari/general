@@ -1,4 +1,4 @@
-9If you want to override both the default headers and model in your derived class while extending ChatOpenAI, you can modify the headers and model attributes inside the subclass constructor.
+89If you want to override both the default headers and model in your derived class while extending ChatOpenAI, you can modify the headers and model attributes inside the subclass constructor.
 
 
 ---
@@ -197,3 +197,4 @@ Let me know if you need any modifications!
 
 
 
+https://python.langchain.com/docs/tutorials/sql_qa/
