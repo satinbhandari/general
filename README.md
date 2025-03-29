@@ -198,3 +198,79 @@ Let me know if you need any modifications!
 
 
 https://python.langchain.com/docs/tutorials/sql_qa/
+
+
+
+
+Yes, there are multiple Python libraries to convert text files to PDF. Here are some commonly used ones:
+
+1. ReportLab – A powerful library for generating PDFs, allowing you to control fonts, layouts, and formatting.
+
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+def text_to_pdf(text_file, pdf_file):
+    c = canvas.Canvas(pdf_file, pagesize=letter)
+    width, height = letter
+    y_position = height - 40  # Start from top margin
+
+    with open(text_file, "r", encoding="utf-8") as file:
+        for line in file:
+            c.drawString(40, y_position, line.strip())
+            y_position -= 20  # Move to the next line
+            if y_position < 40:  # New page if needed
+                c.showPage()
+                y_position = height - 40
+
+    c.save()
+
+text_to_pdf("sample.txt", "output.pdf")
+
+
+2. FPDF – A lightweight library for creating PDFs with basic text formatting.
+
+from fpdf import FPDF
+
+def text_to_pdf_fpdf(text_file, pdf_file):
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    with open(text_file, "r", encoding="utf-8") as file:
+        for line in file:
+            pdf.cell(200, 10, txt=line.strip(), ln=True)
+
+    pdf.output(pdf_file)
+
+text_to_pdf_fpdf("sample.txt", "output.pdf")
+
+
+3. Pisa (xhtml2pdf) – Converts HTML content to PDF, allowing rich text formatting.
+
+from xhtml2pdf import pisa
+
+def text_to_pdf_pisa(text_file, pdf_file):
+    with open(text_file, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    html_content = f"<pre>{content}</pre>"
+
+    with open(pdf_file, "wb") as output:
+        pisa.CreatePDF(html_content, dest=output)
+
+text_to_pdf_pisa("sample.txt", "output.pdf")
+
+
+
+Which one to choose?
+
+Use ReportLab if you need fine control over layout.
+
+Use FPDF for a simple and lightweight solution.
+
+Use Pisa if you have HTML-formatted text.
+
+
+Let me know if you need customization!
+
