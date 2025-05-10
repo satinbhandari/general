@@ -1,0 +1,49 @@
+You can install Python packages to an alternate path (where you have write access) using pip’s --target option. Here's how:
+
+1. Install to a custom directory
+
+pip install <package-name> --target "C:\Path\To\My\Packages"
+
+For example:
+
+pip install requests --target "C:\Users\Harsh\python_packages"
+
+This installs the requests package and its dependencies into that directory.
+
+
+---
+
+2. Use the packages in your scripts
+
+You must add that directory to sys.path before importing the package:
+
+import sys
+sys.path.insert(0, "C:\\Users\\Harsh\\python_packages")
+
+import requests
+
+
+---
+
+3. Use it from the command line or scripts globally
+
+If you want Python to always look in your custom path:
+
+Set the PYTHONPATH environment variable:
+
+
+PowerShell:
+
+$env:PYTHONPATH = "C:\Users\Harsh\python_packages"
+python myscript.py
+
+Command Prompt:
+
+set PYTHONPATH=C:\Users\Harsh\python_packages
+python myscript.py
+
+
+---
+
+Would you like a script or a batch file to automate this setup?
+
