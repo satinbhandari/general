@@ -111,3 +111,77 @@ You want to enable tracing, logging, or flow diagrams.
 You're running into FastAPI or CLI usage issues.
 
 
+
+
+
+You're absolutely right to question this — google.adk.cli.fast_api.run_async does not export a function called run_async in the current release of the Google Automated Decision Kit (ADK). That was part of an internal or older dev variant and not intended for public usage.
+
+Here's how to correctly run your ADK agent with FastAPI:
+
+You should manually start the FastAPI app and mount your agent using ADK's create_fastapi_app.
+
+
+---
+
+✅ Correct Way to Run ADK Agent in FastAPI
+
+1. agent.py – Same as before (create the agent)
+
+No changes needed here. Keep create_agent() as an async function returning the agent.
+
+2. main.py – Start FastAPI app
+
+# main.py
+import asyncio
+import uvicorn
+from fastapi import FastAPI
+from agent import create_agent
+from google.adk.cli.fast_api import create_fastapi_app
+
+app = FastAPI()
+
+async def init():
+    agent, exit_stack = await create_agent()
+    adk_app = create_fastapi_app(agent)
+    app.mount("/", adk_app)
+
+@app.on_event("startup")
+async def startup_event():
+    await init()
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+---
+
+✅ Dependencies You Need
+
+Make sure you install the correct packages:
+
+pip install "git+https://github.com/google/automated-decision-kit.git"
+pip install uvicorn fastapi
+
+
+---
+
+Bonus: Testing It
+
+Once running, you can POST to:
+
+POST http://localhost:8000/apps/agent/users/<user_id>/sessions/<session_id>
+
+Or try visiting /docs to see the OpenAPI UI.
+
+
+---
+
+Let me know if you'd like:
+
+A template for GeminiLLM if you're using Gemini.
+
+Help mocking or connecting a local MCP tool.
+
+CLI-only version with no FastAPI.
+
+
