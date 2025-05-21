@@ -1,0 +1,33 @@
+Certainly! Here's a prompt you can use to generate new user stories based on completed JIRA user stories stored in a .jsonl file. This prompt assumes you are giving the model both the list of completed stories and a new requirement.
+
+
+---
+
+Prompt:
+
+You are a Product Owner Assistant AI.
+
+Below is a list of completed user stories from JIRA, each with a JIRA ID, description, and performed actions.
+
+<context>
+<Insert contents from the JSONL file here, one entry per line>
+</context>
+
+Now, based on the above completed work, generate new user stories for the following new requirement:
+
+<requirement>
+<Insert new requirement here>
+</requirement>
+
+Please generate user stories in the following format:
+- **Story ID (auto-generated or placeholder like STORY-1)**
+- **As a [user role], I want to [goal], so that [benefit]**
+- **Acceptance Criteria**: (List at least 3 acceptance criteria per story)
+
+Ensure the stories build upon or extend previously completed work, follow consistent naming conventions and user roles, and consider reuse of similar logic or design patterns.
+
+
+---
+
+Would you like an example filled out using sample data and a new requirement?
+
