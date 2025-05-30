@@ -1,0 +1,44 @@
+Here’s a well-structured JIRA story based on the image and your instructions:
+
+
+---
+
+JIRA Title (Header):
+
+Refactor Core Logic to Integrate with a2a-python SDK and Remove Custom MCP Initialization
+
+
+---
+
+JIRA Description:
+
+To align with the latest specifications of the google a2a-python SDK, significant refactoring has been performed in the core business logic to remove redundant and custom-built implementations that were no longer required. The goal is to streamline the MCP server initialization, reduce boilerplate code, and adhere to the new standard SDK practices.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Absolutely! Since the earlier JIRA was about refactoring the common/shared logic, this next JIRA should focus on agent-specific refactoring to align with the new SDK-based common logic.
+
+
+---
+
+JIRA Title (Header):
+
+Update Agent Implementations to Align with Refactored SDK-Based Common Logic
+
+
+---
+
+JIRA Description:
+
+Following the refactoring of the common logic to adopt the latest google a2a-python SDK specifications, agent-specific implementations now need to be updated to work with the new base framework. These changes are essential to ensure compatibility with the shared execution model and eliminate any residual dependencies on deprecated patterns.
+
