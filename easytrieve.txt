@@ -3,30 +3,3 @@ whatever i give after T1, is it centered automatically? By default, whatever you
 So, unless you specify otherwise, your T1 content will appear centered at the top of each report page.
 
 
-Here’s a professionally worded and polite draft email you can send to the person to express your concerns and stress the importance of the meeting:
-
-
----
-
-Subject: Follow-up on Rescheduled Meeting
-
-Hi [Name],
-
-I hope you're doing well.
-
-We had rescheduled our meeting based on your proposed time, but unfortunately, it did not happen as expected. I understand that things can get busy, but I wanted to highlight that this discussion is critical for us to move forward with our work.
-
-The task at hand is time-sensitive and aligns with current industry developments. Any delay in its completion could impact our ability to stay aligned with ongoing changes and expectations.
-
-Could you please let me know a time that works best for you in the next day or two? It’s important we close on the pending points at the earliest.
-
-Looking forward to your response.
-
-Best regards,
-[Your Name]
-
-
----
-
-Let me know if you'd like to make it more assertive or more conciliatory, depending on your relationship with the person.
-
