@@ -1,0 +1,3 @@
+whatever i give after T1, is it centered automatically? By default, whatever you specify after `TITLE 1` (T1) in an Easytrieve report is automatically centered within the available line width, as determined by the `LINESIZE` parameter of the `REPORT` statement[1][2][5]. This centering applies to all title lines unless you explicitly override it using the `NOADJUST` parameter, which causes the title to be left-justified instead[2]. 
+
+So, unless you specify otherwise, your T1 content will appear centered at the top of each report page.
