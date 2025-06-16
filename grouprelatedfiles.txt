@@ -1,0 +1,109 @@
+Here’s a crisp and performant Python script that:
+
+Accepts:
+
+1. input_dir: recursively scans for COBOL files and copybooks.
+
+
+2. output_dir: saves folders where each folder contains a COBOL file and its related copybooks.
+
+
+
+Uses:
+
+Content-based detection for COBOL and copybooks.
+
+Regex to extract COPY dependencies.
+
+Efficient path lookups using dictionaries.
+
+
+
+
+---
+
+✅ Final Python Script
+
+import os
+import shutil
+import re
+import sys
+from pathlib import Path
+from collections import defaultdict
+
+def is_cobol_program(text):
+    return bool(re.search(r'\b(IDENTIFICATION\s+DIVISION|PROGRAM-ID)\b', text, re.IGNORECASE))
+
+def extract_copybook_names(text):
+    return re.findall(r'\bCOPY\s+["\']?([A-Z0-9_-]+)["\']?', text, re.IGNORECASE)
+
+def read_text(path):
+    try:
+        return path.read_text(encoding='utf-8', errors='ignore')
+    except Exception:
+        return ''
+
+def main(input_dir, output_dir):
+    input_dir = Path(input_dir).resolve()
+    output_dir = Path(output_dir).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    files = [f for f in input_dir.rglob('*') if f.is_file()]
+    content_map = {f: read_text(f) for f in files}
+
+    cobol_files = {}
+    copybook_lookup = defaultdict(list)
+
+    for f, content in content_map.items():
+        if is_cobol_program(content):
+            cobol_files[f] = extract_copybook_names(content)
+        else:
+            copybook_lookup[f.stem.lower()].append(f)
+
+    for idx, (cob_file, copybooks) in enumerate(cobol_files.items(), 1):
+        group_folder = output_dir / f'program_{idx}'
+        group_folder.mkdir(exist_ok=True)
+
+        shutil.copy2(cob_file, group_folder)
+
+        for name in copybooks:
+            for match in copybook_lookup.get(name.lower(), []):
+                shutil.copy2(match, group_folder)
+
+    print(f"Processed {len(cobol_files)} COBOL programs into {output_dir}")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python group_cobol.py <input_dir> <output_dir>")
+        sys.exit(1)
+
+    main(sys.argv[1], sys.argv[2])
+
+
+---
+
+🧪 Usage
+
+python group_cobol.py /path/to/input_dir /path/to/output_dir
+
+
+---
+
+⚡ Performance Tips
+
+Uses Path.rglob('*') for fast recursive scanning.
+
+Avoids redundant reads with a content cache.
+
+Uses .stem.lower() for consistent copybook matching.
+
+
+Let me know if you'd like it to:
+
+Zip each program folder
+
+Generate a summary JSON
+
+Or include nested COPY resolution
+
+
