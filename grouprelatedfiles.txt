@@ -1,40 +1,57 @@
-Here’s a crisp and performant Python script that:
-
-Accepts:
-
-1. input_dir: recursively scans for COBOL files and copybooks.
+Sure! Here's the complete, optimized, and robust Python script that:
 
 
-2. output_dir: saves folders where each folder contains a COBOL file and its related copybooks.
+---
+
+✅ What It Does:
+
+1. Takes two inputs:
+
+input_dir: Directory (with subfolders) holding COBOL files and copybooks (no guaranteed extensions).
+
+output_dir: Where it groups each COBOL program and its matching copybooks into its own folder.
 
 
 
-Uses:
+2. Recursively scans all files in the input directory.
 
-Content-based detection for COBOL and copybooks.
 
-Regex to extract COPY dependencies.
+3. Identifies COBOL programs by checking for IDENTIFICATION DIVISION or PROGRAM-ID.
 
-Efficient path lookups using dictionaries.
+
+4. Extracts COPY statements and maps them to files by name (case-insensitive, no extension reliance).
+
+
+5. Creates an output folder per COBOL file and puts:
+
+The COBOL file
+
+Any matching copybooks (if any)
+
+
+
+6. Handles COBOL files with no COPY statements gracefully.
 
 
 
 
 ---
 
-✅ Final Python Script
+📜 Final Code
 
 import os
-import shutil
 import re
+import shutil
 import sys
 from pathlib import Path
 from collections import defaultdict
 
 def is_cobol_program(text):
+    """Detects if a file is a COBOL program based on keywords."""
     return bool(re.search(r'\b(IDENTIFICATION\s+DIVISION|PROGRAM-ID)\b', text, re.IGNORECASE))
 
 def extract_copybook_names(text):
+    """Extracts COPY statements like: COPY CUSTOMER-INFO."""
     return re.findall(r'\bCOPY\s+["\']?([A-Z0-9_-]+)["\']?', text, re.IGNORECASE)
 
 def read_text(path):
@@ -48,29 +65,43 @@ def main(input_dir, output_dir):
     output_dir = Path(output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    files = [f for f in input_dir.rglob('*') if f.is_file()]
-    content_map = {f: read_text(f) for f in files}
+    # Recursively collect all files
+    all_files = [f for f in input_dir.rglob('*') if f.is_file()]
+    print(f"Found {len(all_files)} files in input directory.")
 
-    cobol_files = {}
-    copybook_lookup = defaultdict(list)
+    # Read content for all files once
+    file_content_map = {f: read_text(f) for f in all_files}
 
-    for f, content in content_map.items():
+    cobol_files = {}  # file -> [copybook names]
+    copybook_map = defaultdict(list)  # stem -> list of files
+
+    # First pass: classify COBOL files and build copybook index
+    for f, content in file_content_map.items():
         if is_cobol_program(content):
             cobol_files[f] = extract_copybook_names(content)
         else:
-            copybook_lookup[f.stem.lower()].append(f)
+            copybook_map[f.stem.lower()].append(f)
 
-    for idx, (cob_file, copybooks) in enumerate(cobol_files.items(), 1):
+    print(f"Identified {len(cobol_files)} COBOL programs.")
+
+    # Process each COBOL file
+    for idx, (cobol_path, copybook_names) in enumerate(cobol_files.items(), 1):
         group_folder = output_dir / f'program_{idx}'
         group_folder.mkdir(exist_ok=True)
 
-        shutil.copy2(cob_file, group_folder)
+        # Copy COBOL file
+        shutil.copy2(cobol_path, group_folder)
+        matched_copybooks = 0
 
-        for name in copybooks:
-            for match in copybook_lookup.get(name.lower(), []):
-                shutil.copy2(match, group_folder)
+        # Match and copy copybooks (if any)
+        for name in copybook_names:
+            for match_file in copybook_map.get(name.lower(), []):
+                shutil.copy2(match_file, group_folder)
+                matched_copybooks += 1
 
-    print(f"Processed {len(cobol_files)} COBOL programs into {output_dir}")
+        print(f"[program_{idx}] {cobol_path.name} -> {matched_copybooks} copybooks")
+
+    print("\n✅ Grouping complete.")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -82,28 +113,44 @@ if __name__ == "__main__":
 
 ---
 
-🧪 Usage
+📦 Example Usage
 
 python group_cobol.py /path/to/input_dir /path/to/output_dir
 
 
 ---
 
-⚡ Performance Tips
+🧠 Output Example
 
-Uses Path.rglob('*') for fast recursive scanning.
+If your input_dir has files like:
 
-Avoids redundant reads with a content cache.
+input_dir/
+├── programs/
+│   └── sales_prog
+├── copies/
+│   ├── customer-detail
+│   └── account-info
 
-Uses .stem.lower() for consistent copybook matching.
+And sales_prog contains:
+
+IDENTIFICATION DIVISION.
+PROGRAM-ID. SALES.
+COPY CUSTOMER-DETAIL.
+COPY ACCOUNT-INFO.
+
+Then output will be:
+
+output_dir/
+└── program_1/
+    ├── sales_prog
+    ├── customer-detail
+    └── account-info
 
 
-Let me know if you'd like it to:
+---
 
-Zip each program folder
+✅ Handles:
 
-Generate a summary JSON
-
-Or include nested COPY resolution
+COBOL
 
 
