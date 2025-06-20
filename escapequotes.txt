@@ -1,0 +1,45 @@
+To escape unescaped double quotes (") in a JSON-like string returned from Gemini (or any model), you'll want to:
+
+Identify double quotes that are not already escaped (i.e., not preceded by a backslash).
+
+Escape them by prefixing with a backslash (\").
+
+
+Here’s a Python solution using re.sub to handle this safely:
+
+✅ Safe Way Using Regular Expressions:
+
+import re
+
+def escape_unescaped_quotes(json_like_str):
+    # Replace " that is not preceded by a backslash with \"
+    escaped_str = re.sub(r'(?<!\\)"', r'\\"', json_like_str)
+    return escaped_str
+
+Example:
+
+raw_response = 'Here is a "bad" JSON: {"name": "John", "bio": "He said "Hello""}'
+fixed_response = escape_unescaped_quotes(raw_response)
+
+print(fixed_response)
+
+Output:
+
+Here is a \"bad\" JSON: {\"name\": \"John\", \"bio\": \"He said \\\"Hello\\\"\"}
+
+> This ensures that:
+
+
+
+All standalone double quotes become \".
+
+Already escaped quotes (\") are not double-escaped.
+
+
+
+---
+
+✅ Bonus Tip: If you're planning to convert this into a real JSON string (like using json.loads()), make sure the overall structure is valid. If the model returns incomplete or corrupted JSON, consider using libraries like jsonfix or demjson3 which can attempt auto-repair.
+
+Let me know if you'd like help validating or fixing the entire JSON string as well.
+
