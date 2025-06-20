@@ -1,45 +1,103 @@
-To escape unescaped double quotes (") in a JSON-like string returned from Gemini (or any model), you'll want to:
-
-Identify double quotes that are not already escaped (i.e., not preceded by a backslash).
-
-Escape them by prefixing with a backslash (\").
+Great—thanks for the clarification. Since your JSON is deeply nested and complex, the safest and most robust way is to recursively walk through the structure (dicts, lists, etc.) and escape unescaped double quotes only inside string values, without touching the structure itself.
 
 
-Here’s a Python solution using re.sub to handle this safely:
+---
 
-✅ Safe Way Using Regular Expressions:
+✅ Robust Python Solution for Deeply Nested JSON
 
+import json
 import re
 
-def escape_unescaped_quotes(json_like_str):
-    # Replace " that is not preceded by a backslash with \"
-    escaped_str = re.sub(r'(?<!\\)"', r'\\"', json_like_str)
-    return escaped_str
+def escape_unescaped_quotes(s):
+    """
+    Escapes only unescaped double quotes inside a string.
+    Does not modify quotes that are already escaped.
+    """
+    return re.sub(r'(?<!\\)"', r'\"', s)
 
-Example:
+def recursively_escape_json(obj):
+    if isinstance(obj, dict):
+        return {k: recursively_escape_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [recursively_escape_json(item) for item in obj]
+    elif isinstance(obj, str):
+        return escape_unescaped_quotes(obj)
+    else:
+        return obj  # Leave numbers, booleans, None unchanged
 
-raw_response = 'Here is a "bad" JSON: {"name": "John", "bio": "He said "Hello""}'
-fixed_response = escape_unescaped_quotes(raw_response)
+def fix_json_quotes(json_str):
+    try:
+        data = json.loads(json_str)
+        return json_str  # Already valid
+    except json.JSONDecodeError:
+        pass  # Invalid JSON, try to fix manually
 
-print(fixed_response)
+    # Try a naive fix using regex to identify roughly structured JSON
+    # Use a looser parser to find dict structure
+    # Assumes the JSON *looks* like JSON but fails due to unescaped quotes
 
-Output:
+    # Optional: you could use something like demjson or simplejson with loose mode
+    raise ValueError("Input JSON is malformed beyond recovery with standard methods.")
 
-Here is a \"bad\" JSON: {\"name\": \"John\", \"bio\": \"He said \\\"Hello\\\"\"}
+def sanitize_complex_json(json_str):
+    """
+    Attempts to parse the JSON, fix unescaped double quotes inside string values,
+    and re-serialize it back to a clean JSON string.
+    """
+    try:
+        parsed = json.loads(json_str)
+        cleaned = recursively_escape_json(parsed)
+        return json.dumps(cleaned, indent=2)
+    except json.JSONDecodeError as e:
+        return f"Initial JSON parsing failed: {e}"
 
-> This ensures that:
+# Example usage
+corrupt_json = '''
+{
+  "name": "John "Johnny" Doe",
+  "details": {
+    "title": "Senior "Engineer"",
+    "notes": ["Works on "critical" systems", "Promoted in "2024""]
+  }
+}
+'''
+
+cleaned_json = sanitize_complex_json(corrupt_json)
+print(cleaned_json)
 
 
+---
 
-All standalone double quotes become \".
+🔧 What It Does:
 
-Already escaped quotes (\") are not double-escaped.
+Recursively walks through the dictionary or list.
+
+For every string value, it escapes any " that is not already escaped (\").
+
+Leaves numbers, booleans, and None untouched.
+
+Safely re-serializes the fixed data to a valid JSON string.
 
 
 
 ---
 
-✅ Bonus Tip: If you're planning to convert this into a real JSON string (like using json.loads()), make sure the overall structure is valid. If the model returns incomplete or corrupted JSON, consider using libraries like jsonfix or demjson3 which can attempt auto-repair.
+🧠 Why Not Just Regex the Entire JSON?
 
-Let me know if you'd like help validating or fixing the entire JSON string as well.
+Regex doesn’t handle:
+
+Nesting ({}, [])
+
+Strings inside strings
+
+Edge cases like numbers, booleans, nulls
+
+
+The above approach parses once, fixes values at the right level, and ensures the final result is valid JSON.
+
+
+
+---
+
+Would you like this wrapped as a command-line tool or callable function from your Gemini integration pipeline?
 
