@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Framework & LandGraph Training</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 
+    Chosen Palette: Warm Neutrals (Slate, Zinc, Stone)
+    Application Structure Plan: The application is structured as an interactive, single-page learning journey, divided into four main thematic sections. This design moves away from the linear format of the source report to a more engaging, task-oriented flow. The user can navigate via a sticky sidebar, allowing them to jump between foundational concepts, the MCP deep-dive, and advanced A2A communication. This structure was chosen for usability because it breaks down a complex topic into digestible modules, uses interactive diagrams to clarify abstract relationships (e.g., Agent -> Tool -> LLM), and employs side-by-side comparisons to highlight the clear benefits of the framework's solutions (e.g., Direct API call vs. Tachyon Client). This approach facilitates better understanding and retention than a simple text document.
+    Visualization & Content Choices: 
+    - Report Info: Complexity of direct API calls vs. simplicity of the Tachyon wrapper. -> Goal: Compare. -> Viz/Method: Side-by-side annotated code blocks (HTML/CSS). -> Interaction: None, the visual comparison is the key. -> Justification: Directly illustrates the problem and solution for maximum impact. -> Library/Method: HTML/CSS.
+    - Report Info: The relationship between Agent, LangGraph, Tools, and LLMs. -> Goal: Organize. -> Viz/Method: Interactive flowchart using styled HTML divs. -> Interaction: On hover, a component and its description are highlighted. -> Justification: Provides a high-level "map" of the ecosystem, making the abstract relationships concrete. -> Library/Method: HTML/CSS/JS.
+    - Report Info: The workflow of an agent processing a query and using a tool. -> Goal: Change/Process. -> Viz/Method: Animated, step-by-step diagram. -> Interaction: User clicks a button to advance the animation through stages (Query -> Decide -> Act -> Respond). -> Justification: Breaks down a dynamic process into a clear, sequential flow, which is more effective for learning than a static code block. -> Library/Method: HTML/CSS/JS.
+    - Report Info: The drawbacks of simple Python functions vs. the benefits of MCP tools. -> Goal: Compare. -> Viz/Method: Two-column layout with Unicode icons representing benefits (e.g., discoverability, reusability). -> Justification: Clearly contrasts the two approaches and highlights the value proposition of MCP. -> Library/Method: HTML/CSS.
+    - New Feature: LLM Interaction - Try it out. -> Goal: Inform/Engage. -> Viz/Method: Text area for prompt, button, display area for response. -> Interaction: User inputs text, clicks button to get LLM response. -> Justification: Provides a direct, hands-on demonstration of LLM capabilities. -> Library/Method: HTML/CSS/JS + Gemini API.
+    - New Feature: Tools & Agents - Generate Tool Description. -> Goal: Inform/Engage. -> Viz/Method: Text area for tool purpose, button, display area for description. -> Interaction: User inputs tool purpose, clicks button to get generated description. -> Justification: Shows how LLMs can assist in defining tools, reinforcing the concept of structured tool definitions. -> Library/Method: HTML/CSS/JS + Gemini API.
+    - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* stone-50 */
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-link.active {
+            background-color: #475569; /* slate-600 */
+            color: white;
+            font-weight: 600;
+        }
+        .nav-link:not(.active):hover {
+            background-color: #e2e8f0; /* slate-200 */
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .code-block {
+            background-color: #1e293b; /* slate-800 */
+            color: #e2e8f0; /* slate-200 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+        .code-block .token.comment { color: #94a3b8; } /* slate-400 */
+        .code-block .token.keyword { color: #93c5fd; } /* blue-300 */
+        .code-block .token.function { color: #a5b4fc; } /* indigo-300 */
+        .code-block .token.string { color: #fde047; } /* yellow-300 */
+        .code-block .token.number { color: #6ee7b7; } /* emerald-300 */
+        .code-block .token.class-name { color: #f9a8d4; } /* pink-300 */
+        .flow-step {
+            transition: all 0.5s ease-in-out;
+            opacity: 0.3;
+            transform: scale(0.95);
+        }
+        .flow-step.active {
+            opacity: 1;
+            transform: scale(1);
+            border-color: #475569; /* slate-600 */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .flow-arrow {
+            transition: all 0.5s ease-in-out;
+            opacity: 0.3;
+        }
+        .flow-arrow.active {
+            opacity: 1;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #475569;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-100 border-r border-slate-200 p-4 sticky top-0 h-screen">
+            <h1 class="text-xl font-bold text-slate-800 mb-6">Agentic Framework</h1>
+            <nav class="flex flex-col space-y-2">
+                <a href="#introduction" class="nav-link p-3 rounded-lg" data-section="introduction">
+                    <span class="mr-2">🚀</span> Introduction
+                </a>
+                <a href="#llm-interaction" class="nav-link p-3 rounded-lg" data-section="llm-interaction">
+                    <span class="mr-2">💬</span> LLM Interaction
+                </a>
+                <a href="#tools-agents" class="nav-link p-3 rounded-lg" data-section="tools-agents">
+                    <span class="mr-2">🛠️</span> Tools & Agents
+                </a>
+                <a href="#mcp-deep-dive" class="nav-link p-3 rounded-lg" data-section="mcp-deep-dive">
+                    <span class="mr-2">📜</span> MCP Deep Dive
+                </a>
+                <a href="#a2a-communication" class="nav-link p-3 rounded-lg" data-section="a2a-communication">
+                    <span class="mr-2">🤝</span> A2A Communication
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 md:p-10">
+            <!-- Introduction Section -->
+            <section id="introduction" class="content-section">
+                <h2 class="text-3xl font-bold text-slate-800 mb-4">Welcome to the Agentic Framework Training</h2>
+                <p class="text-lg text-slate-600 mb-6 max-w-3xl">
+                    This interactive guide will walk you through the core components of our agentic application ecosystem. You'll learn how we simplify interacting with Large Language Models (LLMs), build powerful and reusable tools with the Model Context Protocol (MCP), and orchestrate complex workflows with LangGraph agents.
+                </p>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">Our Learning Journey</h3>
+                    <p class="text-slate-600 mb-6">The goal is to understand how we move from complex, direct API calls to a standardized, scalable, and interoperable system of agents and tools. Use the navigation on the left to explore each concept.</p>
+                    <div id="big-picture-diagram" class="mt-4 p-4 rounded-lg bg-slate-50 border">
+                         <p class="text-center font-semibold text-slate-700 mb-4">High-Level Ecosystem</p>
+                         <div class="flex justify-center items-center space-x-4">
+                             <div class="diagram-item text-center p-3 rounded-lg bg-white border" data-info="user-info">
+                                 <span class="text-2xl">👤</span><p class="text-sm font-medium">User</p>
+                             </div>
+                             <div class="text-2xl font-light text-slate-400">→</div>
+                             <div class="diagram-item text-center p-3 rounded-lg bg-white border" data-info="agent-info">
+                                 <span class="text-2xl">🤖</span><p class="text-sm font-medium">LangGraph Agent</p>
+                             </div>
+                              <div class="text-2xl font-light text-slate-400">→</div>
+                             <div class="flex flex-col space-y-2">
+                                <div class="diagram-item text-center p-3 rounded-lg bg-white border" data-info="llm-info">
+                                    <span class="text-2xl">🧠</span><p class="text-sm font-medium">LLM</p>
+                                </div>
+                                 <div class="diagram-item text-center p-3 rounded-lg bg-white border" data-info="tool-info">
+                                    <span class="text-2xl">🛠️</span><p class="text-sm font-medium">MCP Tool</p>
+                                </div>
+                             </div>
+                         </div>
+                         <div id="diagram-info-box" class="mt-4 p-4 text-center text-slate-600 bg-slate-100 rounded-lg min-h-[6rem] flex items-center justify-center transition-all duration-300">
+                             Hover over a component to learn more.
+                         </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- LLM Interaction Section -->
+            <section id="llm-interaction" class="content-section">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Simplifying LLM Interaction</h2>
+                <p class="text-lg text-slate-600 mb-6 max-w-3xl">Directly calling an LLM API involves complex boilerplate for authentication and token management. Our `Tachyon-Langchain Client` wrapper abstracts this away, making the process clean and simple.</p>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl font-semibold text-slate-800 mb-2">The Hard Way: Direct API Call</h3>
+                        <p class="text-sm text-slate-500 mb-4">When making direct calls to an LLM API hosted on Apigee, you face several challenges. You need to manually handle token generation, ensure tokens are renewed before expiration, and manage error conditions like unauthorized access. This adds significant complexity to every LLM interaction.</p>
+                        <div class="code-block">
+<pre><code class="language-python"><span class="token comment"># Lots of boilerplate required for token management and error handling!</span>
+<span class="token keyword">import</span> requests, json, time
+
+<span class="token comment"># Global variables to store token and its expiry time</span>
+access_token = <span class="token keyword">None</span>
+token_expiry = <span class="token number">0</span> 
+
+<span class="token keyword">def</span> <span class="token function">get_new_token</span>():
+    <span class="token comment"># Imagine complex logic here for OAuth2 client credentials flow</span>
+    <span class="token comment"># This would involve a separate HTTP POST request to an authentication server</span>
+    print(<span class="token string">"Fetching new access token..."</span>)
+    <span class="token comment"># Simulate token generation and expiry</span>
+    <span class="token keyword">return</span> <span class="token string">"simulated_new_access_token"</span>, time.time() + <span class="token number">3600</span> <span class="token comment"># Token valid for 1 hour</span>
+
+<span class="token keyword">def</span> <span class="token function">get_valid_token</span>():
+    <span class="token keyword">global</span> access_token, token_expiry
+    <span class="token comment"># Check if token is missing or expired (with a buffer for renewal)</span>
+    <span class="token keyword">if</span> access_token <span class="token keyword">is</span> <span class="token keyword">None</span> <span class="token keyword">or</span> time.time() >= token_expiry - <span class="token number">60</span>: <span class="token comment"># Renew 60s before expiry</span>
+        access_token, token_expiry = get_new_token()
+    <span class="token keyword">return</span> access_token
+
+<span class="token keyword">def</span> <span class="token function">call_llm_direct</span>(messages):
+    token = get_valid_token()
+    <span class="token keyword">if not</span> token:
+        <span class="token keyword">return</span> {<span class="token string">"error"</span>: <span class="token string">"Failed to obtain valid token."</span>}
+
+    headers = {
+        <span class="token string">"Authorization"</span>: <span class="token string">f"Bearer {token}"</span>,
+        <span class="token string">"Content-Type"</span>: <span class="token string">"application/json"</span>
+    }
+    payload = {<span class="token string">"model"</span>: <span class="token string">"gpt-4o"</span>, <span class="token string">"messages"</span>: messages}
+    
+    <span class="token keyword">try</span>:
+        response = requests.post(<span class="token string">"https://your-apigee-domain.com/openai/v1/chat/completions"</span>, headers=headers, json=payload)
+        response.raise_for_status() <span class="token comment"># Raises HTTPError for bad responses (4xx or 5xx)</span>
+        <span class="token keyword">return</span> response.json()
+    <span class="token keyword">except</span> requests.exceptions.HTTPError <span class="token keyword">as</span> e:
+        <span class="token comment"># Handle specific HTTP errors, e.g., 401 Unauthorized for token issues</span>
+        <span class="token keyword">if</span> e.response.status_code == <span class="token number">401</span>:
+            print(<span class="token string">"Token unauthorized, forcing re-authentication."</span>)
+            <span class="token keyword">global</span> access_token, token_expiry
+            access_token = <span class="token keyword">None</span> <span class="token comment"># Invalidate token to force renewal on next call</span>
+        <span class="token keyword">return</span> {<span class="token string">"error"</span>: <span class="token string">f"API Error: {e.response.status_code} - {e.response.text}"</span>}
+    <span class="token keyword">except Exception</span> <span class="token keyword">as</span> e:
+        <span class="token keyword">return</span> {<span class="token string">"error"</span>: <span class="token string">f"An unexpected error occurred: {e}"</span>}
+</code></pre>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-green-700 mb-2">The Smart Way: Tachyon-Langchain Client</h3>
+                        <p class="text-sm text-slate-500 mb-4">Our `Tachyon-Langchain Client` wrapper handles all the underlying complexities of token generation, renewal, and API endpoint management. This means developers can write clean, focused code without worrying about infrastructure details, significantly improving productivity and reducing errors.</p>
+                        <div class="code-block border-2 border-green-400">
+<pre><code class="language-python"><span class="token comment"># Clean, simple, and focused on the LLM interaction logic.</span>
+<span class="token keyword">from</span> tachyon_langchain_client <span class="token keyword">import</span> TachyonLangchainClient
+
+<span class="token comment"># Initialize the client once, typically with configuration loaded from environment variables.</span>
+<span class="token comment"># The client internally manages API base URLs, token endpoints, client IDs, and secrets.</span>
+llm_client = TachyonLangchainClient(
+    api_base_url=<span class="token string">"https://your-apigee-domain.com/openai/v1"</span>,
+    token_url=<span class="token string">"https://your-apigee-domain.com/oauth/token"</span>,
+    client_id=<span class="token string">"your_client_id"</span>,
+    client_secret=<span class="token string">"your_client_secret"</span>
+)
+
+<span class="token keyword">def</span> <span class="token function">get_llm_response_simplified</span>(prompt, model_name=<span class="token string">"gpt-4o"</span>):
+    messages = [
+        {<span class="token string">"role"</span>: <span class="token string">"system"</span>, <span class="token string">"content"</span>: <span class="token string">"You are a helpful assistant."</span>},
+        {<span class="token string">"role"</span>: <span class="token string">"user"</span>, <span class="token string">"content"</span>: prompt}
+    ]
+    
+    <span class="token keyword">try</span>:
+        <span class="token comment"># The 'chat_complete' method handles all the underlying complexities:</span>
+        <span class="token comment"># - Gets a valid (or renewed) token.</span>
+        <span class="token comment"># - Adds the Authorization header.</span>
+        <span class="token comment"># - Sends the request to the correct LLM endpoint.</span>
+        <span class="token comment"># - Handles basic API errors.</span>
+        response = llm_client.chat_complete(model=model_name, messages=messages)
+        <span class="token keyword">return</span> response[<span class="token string">'choices'</span>][<span class="token number">0</span>][<span class="token string">'message'</span>][<span class="token string">'content'</span>]
+    <span class="token keyword">except Exception</span> <span class="token keyword">as</span> e:
+        print(<span class="token string">f"Error getting LLM response: {e}"</span>)
+        <span class="token keyword">return</span> <span class="token string">"Sorry, I couldn't process your request at the moment."</span>
+</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">✨ Try the LLM Yourself!</h3>
+                    <p class="text-slate-600 mb-4">Type a prompt below and see a response generated by the Gemini API (gemini-2.0-flash). This demonstrates the core capability of an LLM.</p>
+                    <textarea id="llm-prompt-input" class="w-full p-3 border border-slate-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-slate-500" rows="4" placeholder="e.g., Explain the concept of recursion in simple terms."></textarea>
+                    <button id="get-llm-response-btn" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">
+                        ✨ Get LLM Response
+                        <span id="llm-loading-spinner" class="loading-spinner hidden"></span>
+                    </button>
+                    <div id="llm-response-output" class="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg min-h-[5rem] text-slate-700 whitespace-pre-wrap">
+                        Your LLM response will appear here.
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tools & Agents Section -->
+            <section id="tools-agents" class="content-section">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Empowering Agents with Tools</h2>
+                <p class="text-lg text-slate-600 mb-6 max-w-3xl">
+                    Agents use tools to interact with the world beyond text generation. LangGraph allows us to define these tools and orchestrate how an agent decides to use them to fulfill a user's request. Tools can be anything from a calculator to a complex API call.
+                </p>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">Interactive Agent Workflow</h3>
+                    <p class="text-slate-600 mb-6">Click the button below to see how a LangGraph agent processes a query, decides to use a tool, executes it, and formulates a final response. Each step highlights a key phase in the agent's decision-making and action process.</p>
+                    
+                    <div id="agent-flow" class="relative p-4 space-y-4 md:space-y-0 md:space-x-8 flex flex-col md:flex-row justify-center items-center">
+                        <div id="flow-step-1" class="flow-step border-2 p-4 rounded-lg bg-white w-48 text-center">
+                            <p class="font-semibold">1. User Query</p><p class="text-sm text-slate-500">"What's the weather in London?"</p>
+                            <p class="text-xs text-slate-400 mt-1">The agent receives the initial request.</p>
+                        </div>
+                        <div class="flow-arrow text-2xl font-light text-slate-400">→</div>
+                        <div id="flow-step-2" class="flow-step border-2 p-4 rounded-lg bg-white w-48 text-center">
+                            <p class="font-semibold">2. Agent Decides</p><p class="text-sm text-slate-500">LLM identifies need for `get_weather` tool.</p>
+                            <p class="text-xs text-slate-400 mt-1">Based on the query, the LLM determines which tool to call and with what arguments.</p>
+                        </div>
+                        <div class="flow-arrow text-2xl font-light text-slate-400">→</div>
+                        <div id="flow-step-3" class="flow-step border-2 p-4 rounded-lg bg-white w-48 text-center">
+                            <p class="font-semibold">3. Tool Execution</p><p class="text-sm text-slate-500">`get_weather(location="London")` is invoked.</p>
+                            <p class="text-xs text-slate-400 mt-1">The selected tool runs, potentially making an external API call or performing a computation.</p>
+                        </div>
+                        <div class="flow-arrow text-2xl font-light text-slate-400">→</div>
+                        <div id="flow-step-4" class="flow-step border-2 p-4 rounded-lg bg-white w-48 text-center">
+                            <p class="font-semibold">4. Process Result</p><p class="text-sm text-slate-500">Agent receives "Cloudy, 15°C".</p>
+                            <p class="text-xs text-slate-400 mt-1">The agent's LLM processes the tool's output to understand its meaning.</p>
+                        </div>
+                        <div class="flow-arrow text-2xl font-light text-slate-400">→</div>
+                        <div id="flow-step-5" class="flow-step border-2 p-4 rounded-lg bg-white w-48 text-center">
+                            <p class="font-semibold">5. Final Response</p><p class="text-sm text-slate-500">"The weather in London is cloudy..."</p>
+                            <p class="text-xs text-slate-400 mt-1">The agent generates a natural language response to the user.</p>
+                        </div>
+                    </div>
+                    <div class="text-center mt-6">
+                        <button id="agent-flow-btn" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">
+                            Start Animation
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">✨ Generate a Tool Description</h3>
+                    <p class="text-slate-600 mb-4">Describe a tool's purpose, and the Gemini API will help draft a LangChain-style tool description, including arguments and their types. This highlights how LLMs can assist in standardizing tool definitions.</p>
+                    <textarea id="tool-purpose-input" class="w-full p-3 border border-slate-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-slate-500" rows="3" placeholder="e.g., A tool to look up current stock prices for a given ticker symbol."></textarea>
+                    <button id="generate-tool-description-btn" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">
+                        ✨ Generate Tool Description
+                        <span id="tool-loading-spinner" class="loading-spinner hidden"></span>
+                    </button>
+                    <div id="tool-description-output" class="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg min-h-[5rem] text-slate-700 whitespace-pre-wrap">
+                        Generated tool description will appear here. For example:
+<pre><code><span class="token keyword">@tool</span>
+<span class="token keyword">def</span> <span class="token function">get_stock_price</span>(ticker_symbol: str) -> float:
+    <span class="token triple-quoted-string">"""Looks up the current stock price for a given ticker symbol.
+
+    Args:
+        ticker_symbol: The stock ticker symbol (e.g., "GOOG", "MSFT").
+    """</span>
+    <span class="token comment"># Example usage:</span>
+    <span class="token comment"># price = get_stock_price("GOOG")</span>
+    <span class="token keyword">return</span> <span class="token number">150.75</span> <span class="token comment"># Simulated price</span>
+</code></pre>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- MCP Deep Dive Section -->
+            <section id="mcp-deep-dive" class="content-section">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">MCP: The Standard for Tools</h2>
+                <p class="text-lg text-slate-600 mb-6 max-w-3xl">
+                    While simple Python functions are a good start for defining tools, they quickly hit limitations in a complex, enterprise-grade agentic ecosystem. The Model Context Protocol (MCP) provides a robust standard for creating tools that are discoverable, reusable, and independently deployable. We leverage `FastMCP` to make this process efficient and automated.
+                </p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-4">Problem: Simple Python Functions</h3>
+                        <ul class="space-y-3">
+                            <li class="flex items-start"><span class="mr-3 text-red-500">❌</span><span><span class="font-semibold">Not Reusable:</span> Copying and pasting function code across different agents or projects leads to significant code duplication and makes maintenance a nightmare.</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-red-500">❌</span><span><span class="font-semibold">Not Discoverable:</span> Without a central registry or standardized interface, agents (or developers) have no easy way to discover what tools are available or how to use them.</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-red-500">❌</span><span><span class="font-semibold">No Standard:</span> Different teams might implement similar functionalities in inconsistent ways, hindering interoperability and making it difficult to integrate tools from various sources.</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-red-500">❌</span><span><span class="font-semibold">Tightly Coupled:</span> Simple Python functions are typically embedded directly within an agent's codebase. This tight coupling means that tools cannot be deployed, scaled, or updated independently of the agents that use them.</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-red-500">❌</span><span><span class="font-semibold">Complex API Integration:</span> If a tool needs to call an external API, the Python function itself must handle API keys, rate limits, error handling, and request/response parsing, adding significant complexity to each tool.</span></li>
+                        </ul>
+                    </div>
+                    <div class="bg-green-50 p-6 rounded-lg shadow-sm border border-green-200">
+                        <h3 class="text-xl font-semibold text-green-800 mb-4">Solution: MCP Tools with `FastMCP`</h3>
+                        <p class="text-slate-600 mb-4">MCP defines a machine-readable protocol for describing tool capabilities, similar to OpenAPI for web services. `FastMCP` automates the creation of these MCP-compliant tools.</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-start"><span class="mr-3 text-green-500">✅</span><span><span class="font-semibold">Reusable:</span> Define a tool once with MCP, and it can be invoked by any agent or application that understands the MCP standard, typically via a simple HTTP API call.</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-green-500">✅</span><span><span class="font-semibold">Discoverable:</span> `FastMCP` automatically generates a standardized MCP definition (like an OpenAPI spec) for each tool, which can be registered in a central catalog. Agents can then dynamically discover and understand these tools.</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-green-500">✅</span><span><span class="font-semibold">Standardized:</span> The `@mcp.tools()` decorator enforces a consistent structure for tool definitions (inputs, outputs, descriptions), ensuring uniformity across all tools in the ecosystem.</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-green-500">✅</span><span><span class="font-semibold">Decoupled & Scalable:</span> MCP tools are exposed as independent microservices (e.g., FastAPI endpoints managed by `FastMCP`). This allows them to be developed, deployed, and scaled independently of the agents, improving system resilience and scalability.</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-green-500">✅</span><span><span class="font-semibold">Simplified Integration:</span> Agents interact with MCP tools via well-defined API contracts. The complexity of external API calls is encapsulated within the tool's implementation, not in the agent's core logic.</span></li>
+                        </ul>
+                    </div>
+                </div>
+                 <div class="mt-8">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">Defining an MCP Tool with `FastMCP`</h3>
+                    <p class="text-slate-600 mb-4">The `@mcp.tools()` decorator from `FastMCP` turns a standard Python asynchronous function into a fully-fledged, documented, and standardized MCP-compliant API endpoint. It leverages Pydantic models for automatic request validation, type hinting for clear arguments, and docstrings for rich descriptions, all of which are used to generate the underlying MCP schema.</p>
+                    <div class="code-block">
+<pre><code class="language-python"><span class="token keyword">from</span> mcp.server.fastmcp <span class="token keyword">import</span> FastMCP
+<span class="token keyword">from</span> pydantic <span class="token keyword">import</span> BaseModel, Field
+<span class="token keyword">from</span> typing <span class="token keyword">import</span> Optional
+
+<span class="token comment"># Initialize FastMCP application. This acts as the FastAPI application instance.</span>
+mcp = FastMCP(
+    title=<span class="token string">"My Agentic Tools"</span>,
+    description=<span class="token string">"A collection of MCP-compliant tools for agentic applications."</span>,
+    version=<span class="token string">"1.0.0"</span>
+)
+
+<span class="token comment"># Define Pydantic models for input and output data.</span>
+<span class="token comment"># These models automatically generate the JSON Schema for the MCP definition.</span>
+<span class="token keyword">class</span> <span class="token class-name">WeatherInput</span>(BaseModel):
+    city: str = Field(..., description=<span class="token string">"The name of the city for which to get weather."</span>)
+    country_code: str = Field(..., description=<span class="token string">"The 2-letter ISO country code (e.g., US, UK, FR)."</span>)
+
+<span class="token keyword">class</span> <span class="token class-name">WeatherOutput</span>(BaseModel):
+    city: str
+    country_code: str
+    temperature: float = Field(..., description=<span class="token string">"Temperature in Celsius."</span>)
+    conditions: str = Field(..., description=<span class="token string">"e.g., 'Clear Sky', 'Partly Cloudy'."</span>)
+    humidity: Optional[int] = Field(<span class="token keyword">None</span>, description=<span class="token string">"Humidity percentage."</span>)
+
+<span class="token comment"># Use the @mcp.tools() decorator to define an MCP tool.</span>
+<span class="token comment"># FastMCP inspects the function signature, Pydantic models, and docstrings</span>
+<span class="token comment"># to automatically generate the MCP definition and expose it as an API endpoint.</span>
+@mcp.tools(
+    tool_id=<span class="token string">"get_current_weather"</span>, <span class="token comment"># Unique ID for the tool</span>
+    description=<span class="token string">"Retrieves the current weather conditions for a specified geographic location."</span>,
+    response_model=WeatherOutput <span class="token comment"># Specifies the Pydantic model for the tool's output</span>
+)
+<span class="token keyword">async def</span> <span class="token function">get_current_weather_mcp</span>(input: WeatherInput) -> WeatherOutput:
+    <span class="token triple-quoted-string">"""
+    Fetches the current weather for a given city and country code.
+    This function simulates an external weather API call.
+    
+    Args:
+        input: A WeatherInput object containing city and country_code.
+    
+    Returns:
+        A WeatherOutput object with temperature, conditions, etc.
+    """</span>
+    print(<span class="token string">f"MCP Tool: Fetching weather for {input.city}, {input.country_code}..."</span>)
+    <span class="token comment"># In a real scenario, this would make an actual HTTP request to a weather API.</span>
+    <span class="token keyword">if</span> input.city.lower() == <span class="token string">"london"</span> <span class="token keyword">and</span> input.country_code.upper() == <span class="token string">"UK"</span>:
+        <span class="token keyword">return</span> WeatherOutput(
+            city=input.city,
+            country_code=input.country_code,
+            temperature=<span class="token number">15.0</span>,
+            conditions=<span class="token string">"Cloudy"</span>,
+            humidity=<span class="token number">80</span>
+        )
+    <span class="token keyword">elif</span> input.city.lower() == <span class="token string">"new york"</span> <span class="token keyword">and</span> input.country_code.upper() == <span class="token string">"US"</span>:
+        <span class="token keyword">return</span> WeatherOutput(
+            city=input.city,
+            country_code=input.country_code,
+            temperature=<span class="token number">25.5</span>,
+            conditions=<span class="token string">"Sunny"</span>,
+            humidity=<span class="token number">50</span>
+        )
+    <span class="token keyword">else</span>:
+        <span class="token comment"># Handle cases where data is not available or an error occurs.</span>
+        <span class="token comment"># In a production system, you might raise an HTTPException or return a specific error structure.</span>
+        print(<span class="token string">f"Weather data not available for {input.city}, {input.country_code}."</span>)
+        <span class="token keyword">return</span> WeatherOutput(
+            city=input.city,
+            country_code=input.country_code,
+            temperature=<span class="token number">0.0</span>, <span class="token comment"># Indicate no data</span>
+            conditions=<span class="token string">"Data Not Available"</span>,
+            humidity=<span class="token number">0</span>
+        )
+
+<span class="token comment"># To run this FastMCP application (e.g., in a file named `app.py`):</span>
+<span class="token comment"># import uvicorn</span>
+<span class="token comment"># if __name__ == "__main__":</span>
+<span class="token comment">#     uvicorn.run(mcp.app, host="0.0.0.0", port=8000)</span>
+<span class="token comment"># This would expose the 'get_current_weather' tool at an endpoint like:</span>
+<span class="token comment"># GET http://localhost:8000/tools/get_current_weather?city=London&country_code=UK</span>
+</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- A2A Communication Section -->
+            <section id="a2a-communication" class="content-section">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Advanced: Agent-to-Agent (A2A) Communication</h2>
+                <p class="text-lg text-slate-600 mb-6 max-w-3xl">
+                    A significant challenge in complex agentic systems arises when different specialized agents need to collaborate. Without a standardized communication method, this can lead to a tangled web of custom integrations. The LangGraph A2A (Agent-to-Agent) implementation, built upon MCP, provides a robust solution.
+                </p>
+                
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">The Problem: Non-Standardized Agent Communication</h3>
+                    <p class="text-slate-600 mb-4">Consider a scenario with a "Customer Service Agent" and a "Technical Support Agent." If the Customer Service Agent encounters a technical query, how does it hand off to or consult with the Technical Support Agent?</p>
+                    <ul class="space-y-3 mb-6">
+                        <li class="flex items-start"><span class="mr-3 text-red-500">❌</span><span><span class="font-semibold">Lack of Interoperability:</span> Without a common protocol, Agent A doesn't know how to "talk" to Agent B. They might use different internal data structures, communication channels (e.g., direct function calls vs. message queues), or expect incompatible input/output formats. This prevents seamless collaboration.</span></li>
+                        <li class="flex items-start"><span class="mr-3 text-red-500">❌</span><span><span class="font-semibold">Hardcoding & Tight Coupling:</span> You would be forced to hardcode specific integration logic for every pair of agents that need to communicate. This creates a brittle system where adding a new agent or modifying an existing one requires updating many other parts of the codebase.</span></li>
+                        <li class="flex items-start"><span class="mr-3 text-red-500">❌</span><span><span class="font-semibold">Deployment & Scalability Challenges:</span> If Agent B is a separate service, Agent A needs to know its specific API endpoint, authentication mechanisms, and request/response schemas. This reintroduces the same complexities that our Tachyon-Langchain Client solved for LLM interaction, but now for inter-agent communication.</span></li>
+                    </ul>
+
+                    <h3 class="text-xl font-semibold text-slate-800 mb-4">The Solution: LangGraph A2A (Agent-to-Agent) via MCP Tools</h3>
+                    <p class="text-slate-600 mb-6">The core idea behind LangGraph A2A is to treat other agents as **specialized MCP tools**. This means that any agent whose capabilities need to be exposed for inter-agent communication will define those capabilities using MCP and then be hosted as a standard API endpoint (e.g., using `FastMCP`).</p>
+                    
+                    <div class="mt-4 p-4 rounded-lg bg-slate-50 border">
+                         <p class="text-center font-semibold text-slate-700 mb-4">A2A Communication Flow</p>
+                         <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4">
+                             <div class="text-center p-3 rounded-lg bg-white border border-slate-300 shadow-sm">
+                                 <span class="text-2xl">🗣️</span><p class="text-sm font-medium">Agent A<br>(Customer Service)</p>
+                                 <p class="text-xs text-slate-500 mt-1">Identifies need for tech support.</p>
+                             </div>
+                             <div class="text-2xl font-light text-slate-400">
+                                <div class="flex flex-col items-center">
+                                    <span>→</span>
+                                    <span class="text-xs font-mono text-slate-500 mt-1">MCP Tool Call</span>
+                                    <span class="text-xs text-slate-500">(`call_mcp_tool`)</span>
+                                </div>
+                             </div>
+                             <div class="text-center p-3 rounded-lg bg-blue-50 border border-blue-200 shadow-sm">
+                                 <span class="text-2xl">🛠️</span><p class="text-sm font-medium">MCP Endpoint<br>(FastAPI Server)</p>
+                                 <p class="text-xs text-slate-500 mt-1">Routes the request to Agent B.</p>
+                             </div>
+                             <div class="text-2xl font-light text-slate-400">→</div>
+                             <div class="text-center p-3 rounded-lg bg-white border border-slate-300 shadow-sm">
+                                 <span class="text-2xl">⚙️</span><p class="text-sm font-medium">Agent B<br>(Tech Support)</p>
+                                 <p class="text-xs text-slate-500 mt-1">Processes the request as a tool input.</p>
+                             </div>
+                         </div>
+                         <p class="text-center text-sm text-slate-500 mt-6 max-w-2xl mx-auto">
+                            By treating Agent B as a standardized MCP tool, Agent A doesn't need to know its internal logic. It just makes a predictable API call to Agent B's `FastMCP`-exposed endpoint, enabling a decoupled and scalable multi-agent system. Agent B then performs its specialized task and returns a structured MCP response.
+                         </p>
+                    </div>
+
+                    <div class="mt-8">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-4">Conceptual Example: Technical Support Agent as an MCP Tool</h3>
+                        <p class="text-slate-600 mb-4">Here's how a "Technical Support Agent" could be defined as an MCP tool using `FastMCP` and then invoked by another agent.</p>
+                        <h4 class="text-lg font-semibold text-slate-700 mb-2">1. Define Agent B's Capability as an MCP Tool (`tech_support_agent_mcp.py`)</h4>
+                        <p class="text-slate-600 mb-4">This code defines the `diagnose_issue` capability of the Technical Support Agent as an MCP tool using `@mcp.tools()`. This will automatically generate its MCP definition and expose it via a FastAPI endpoint.</p>
+                        <div class="code-block">
+<pre><code class="language-python"><span class="token keyword">from</span> mcp.server.fastmcp <span class="token keyword">import</span> FastMCP
+<span class="token keyword">from</span> pydantic <span class="token keyword">import</span> BaseModel, Field
+<span class="token keyword">from</span> typing <span class="token keyword">import</span> List, Optional
+
+mcp_tech_support = FastMCP(
+    title=<span class="token string">"Technical Support Agent Capabilities"</span>,
+    description=<span class="token string">"MCP tools for technical issue diagnosis and resolution."</span>,
+    version=<span class="token string">"1.0.0"</span>
+)
+
+<span class="token keyword">class</span> <span class="token class-name">DiagnoseIssueInput</span>(BaseModel):
+    issue_description: str = Field(..., description=<span class="token string">"A detailed description of the technical problem."</span>)
+    user_id: str = Field(..., description=<span class="token string">"The ID of the user experiencing the issue."</span>)
+
+<span class="token keyword">class</span> <span class="token class-name">DiagnoseIssueOutput</span>(BaseModel):
+    diagnosis: str = Field(..., description=<span class="token string">"The agent's diagnosis of the issue."</span>)
+    solution_steps: List[str] = Field(..., description=<span class="token string">"Recommended steps to resolve the issue."</span>)
+    escalation_needed: bool = Field(<span class="token keyword">False</span>, description=<span class="token string">"True if further escalation is required."</span>)
+
+@mcp_tech_support.tools(
+    tool_id=<span class="token string">"diagnose_technical_issue"</span>,
+    description=<span class="token string">"Diagnoses a technical problem and provides solution steps."</span>,
+    response_model=DiagnoseIssueOutput
+)
+<span class="token keyword">async def</span> <span class="token function">diagnose_technical_issue</span>(input: DiagnoseIssueInput) -> DiagnoseIssueOutput:
+    <span class="token triple-quoted-string">"""
+    Simulates the Technical Support Agent diagnosing an issue.
+    In a real scenario, this would involve an LLM and potentially other tools
+    within Agent B's own LangGraph workflow.
+    """</span>
+    print(<span class="token string">f"Tech Support Agent diagnosing for user {input.user_id}: {input.issue_description}"</span>)
+    
+    diagnosis = <span class="token string">f"Initial diagnosis for '{input.issue_description}'."</span>
+    solution_steps = []
+    escalation_needed = <span class="token keyword">False</span>
+
+    <span class="token keyword">if</span> <span class="token string">"network"</span> <span class="token keyword">in</span> input.issue_description.lower():
+        diagnosis += <span class="token string">" Appears to be a network connectivity issue."</span>
+        solution_steps = [
+            <span class="token string">"1. Check your internet connection."</span>,
+            <span class="token string">"2. Restart your router."</span>,
+            <span class="token string">"3. Try connecting to a different Wi-Fi network."</span>
+        ]
+    <span class="token keyword">elif</span> <span class="token string">"software"</span> <span class="token keyword">in</span> input.issue_description.lower():
+        diagnosis += <span class="token string">" Likely a software configuration problem."</span>
+        solution_steps = [
+            <span class="token string">"1. Reinstall the problematic software."</span>,
+            <span class="token string">"2. Check for driver updates."</span>,
+            <span class="token string">"3. Clear application cache."</span>
+        ]
+    <span class="token keyword">else</span>:
+        diagnosis += <span class="token string">" Further investigation required."</span>
+        solution_steps = [<span class="token string">"1. Please provide more details about the issue to Agent B."</span>]
+        escalation_needed = <span class="token keyword">True</span>
+
+    <span class="token keyword">return</span> DiagnoseIssueOutput(
+        diagnosis=diagnosis,
+        solution_steps=solution_steps,
+        escalation_needed=escalation_needed
+    )
+
+<span class="token comment"># To run this agent as a service (e.g., in `main_tech_support.py`):</span>
+<span class="token comment"># import uvicorn</span>
+<span class="token comment"># from tech_support_agent_mcp import mcp_tech_support</span>
+<span class="token comment"># if __name__ == "__main__":</span>
+<span class="token comment">#     uvicorn.run(mcp_tech_support.app, host="0.0.0.0", port=8001) # Runs on a different port</span>
+</code></pre>
+                        </div>
+
+                        <h4 class="text-lg font-semibold text-slate-700 mt-6 mb-2">2. Agent A Invokes Agent B as an MCP Tool</h4>
+                        <p class="text-slate-600 mb-4">The "Customer Service Agent" (Agent A) can now invoke the `diagnose_technical_issue` MCP tool (which is actually Agent B) just like any other tool. The `call_mcp_tool` wrapper handles the underlying HTTP communication.</p>
+                        <div class="code-block">
+<pre><code class="language-python"><span class="token keyword">from</span> langgraph.graph <span class="token keyword">import</span> StateGraph, END
+<span class="token keyword">from</span> langchain_core.messages <span class="token keyword">import</span> HumanMessage, AIMessage, ToolMessage
+<span class="token keyword">from</span> langchain_core.tools <span class="token keyword">import</span> tool
+<span class="token keyword">from</span> typing <span class="token keyword">import</span> TypedDict, Annotated, List, Union
+<span class="token keyword">import</span> operator
+<span class="token keyword">import</span> requests
+<span class="token keyword">import</span> json
+
+<span class="token comment"># Define the state for Agent A's LangGraph workflow</span>
+<span class="token keyword">class</span> <span class="token class-name">AgentAState</span>(TypedDict):
+    messages: Annotated[List[Union[HumanMessage, AIMessage, ToolMessage]], operator.add]
+
+<span class="token comment"># This function simulates the actual HTTP call to the FastMCP endpoint of Agent B.</span>
+<span class="token comment"># In a real system, this would be a generic client that loads MCP definitions</span>
+<span class="token comment"># and makes HTTP requests.</span>
+<span class="token keyword">def</span> <span class="token function">invoke_external_mcp_tool</span>(tool_id: str, args: dict) -> dict:
+    <span class="token comment"># This URL would point to the running FastMCP service of Agent B (e.g., http://localhost:8001)</span>
+    api_url = <span class="token string">f"http://localhost:8001/tools/{tool_id}"</span> 
+    print(<span class="token string">f"\nAgent A calling external MCP Tool (Agent B): {api_url} with args: {args}"</span>)
+    <span class="token keyword">try</span>:
+        response = requests.post(api_url, json=args) <span class="token comment"># Assuming POST for agent capabilities</span>
+        response.raise_for_status()
+        <span class="token keyword">return</span> response.json()
+    <span class="token keyword">except Exception</span> <span class="token keyword">as</span> e:
+        <span class="token keyword">return</span> {<span class="token string">"error"</span>: <span class="token string">f"Failed to call external MCP tool {tool_id}: {e}"</span>}
+
+<span class="token comment"># LangChain Tool wrapper that Agent A's LLM will see and call.</span>
+<span class="token comment"># This tool internally calls our `invoke_external_mcp_tool` function.</span>
+@tool
+<span class="token keyword">def</span> <span class="token function">call_agent_b</span>(issue_description: str, user_id: str) -> str:
+    <span class="token triple-quoted-string">"""
+    Calls the Technical Support Agent (Agent B) to diagnose a technical issue.
+    Args:
+        issue_description: A detailed description of the technical problem.
+        user_id: The ID of the user experiencing the issue.
+    """</span>
+    result = invoke_external_mcp_tool(
+        tool_id=<span class="token string">"diagnose_technical_issue"</span>,
+        args={<span class="token string">"issue_description"</span>: issue_description, <span class="token string">"user_id"</span>: user_id}
+    )
+    <span class="token keyword">return</span> json.dumps(result) <span class="token comment"># Return as string for LLM to parse</span>
+
+<span class="token comment"># List of tools available to Agent A (including Agent B as a tool)</span>
+agent_a_tools = [call_agent_b]
+
+<span class="token comment"># Mock LLM for Agent A (similar to previous section, but now knows about call_agent_b)</span>
+<span class="token keyword">class</span> <span class="token class-name">MockAgentALLM</span>:
+    <span class="token keyword">def</span> <span class="token function">invoke</span>(self, messages):
+        last_message = messages[-<span class="token number">1</span>]
+        <span class="token keyword">if</span> <span class="token keyword">isinstance</span>(last_message, HumanMessage):
+            content = last_message.content.lower()
+            <span class="token keyword">if</span> <span class="token string">"technical problem"</span> <span class="token keyword">in</span> content <span class="token keyword">or</span> <span class="token string">"internet not working"</span> <span class="token keyword">in</span> content:
+                <span class="token comment"># Agent A's LLM decides to call Agent B (the diagnose_technical_issue tool)</span>
+                <span class="token keyword">return</span> AIMessage(
+                    content=<span class="token string">""</span>,
+                    tool_calls=[
+                        {
+                            <span class="token string">"name"</span>: <span class="token string">"call_agent_b"</span>,
+                            <span class="token string">"args"</span>: {
+                                <span class="token string">"issue_description"</span>: last_message.content,
+                                <span class="token string">"user_id"</span>: <span class="token string">"test_user_456"</span>
+                            },
+                            <span class="token string">"id"</span>: <span class="token string">"tool_call_id_a2a_1"</span>
+                        }
+                    ]
+                )
+            <span class="token keyword">else</span>:
+                <span class="token keyword">return</span> AIMessage(content=<span class="token string">f"Hello from Agent A! You said: '{last_message.content}'. How can I assist you further?"</span>)
+        <span class="token keyword">elif</span> <span class="token keyword">isinstance</span>(last_message, ToolMessage):
+            <span class="token comment"># Agent A's LLM processes the output from Agent B</span>
+            tool_output = json.loads(last_message.content)
+            <span class="token keyword">if</span> <span class="token string">"diagnosis"</span> <span class="token keyword">in</span> tool_output:
+                response_text = <span class="token string">f"Agent B's diagnosis: {tool_output['diagnosis']}\n"</span>
+                response_text += <span class="token string">"Solution Steps:\n"</span> + <span class="token string">"\n"</span>.join(tool_output[<span class="token string">'solution_steps'</span>])
+                <span class="token keyword">if</span> tool_output[<span class="token string">'escalation_needed'</span>]:
+                    response_text += <span class="token string">"\nFurther escalation to a human expert is recommended."</span>
+                <span class="token keyword">return</span> AIMessage(content=response_text)
+            <span class="token keyword">else</span>:
+                <span class="token keyword">return</span> AIMessage(content=<span class="token string">f"Agent B returned: {tool_output}"</span>)
+        <span class="token keyword">return</span> AIMessage(content=<span class="token string">"Agent A is not sure how to respond."</span>)
+
+agent_a_llm = MockAgentALLM()
+
+<span class="token comment"># Agent A node for LangGraph (similar to previous Agent class)</span>
+<span class="token keyword">class</span> <span class="token class-name">AgentA</span>:
+    <span class="token keyword">def</span> <span class="token function">__init__</span>(self, llm_model, tools_list):
+        self.llm = llm_model
+        self.tools = {t.name: t <span class="token keyword">for</span> t <span class="token keyword">in</span> tools_list}
+
+    <span class="token keyword">def</span> <span class="token function">__call__</span>(self, state: AgentAState):
+        messages = state[<span class="token string">"messages"</span>]
+        last_message = messages[-<span class="token number">1</span>]
+
+        <span class="token keyword">if</span> <span class="token keyword">isinstance</span>(last_message, ToolMessage):
+            response = self.llm.invoke(messages)
+            <span class="token keyword">return</span> {<span class="token string">"messages"</span>: [response]}
+
+        response = self.llm.invoke(messages)
+        <span class="token keyword">if</span> response.tool_calls:
+            print(<span class="token string">f"\nAgent A decided to call tool (Agent B): {response.tool_calls[<span class="token number">0</span>].name} with args: {response.tool_calls[<span class="token number">0</span>].args}"</span>)
+            tool_output = self.tools[response.tool_calls[<span class="token number">0</span>].name].invoke(response.tool_calls[<span class="token number">0</span>].args)
+            <span class="token keyword">return</span> {<span class="token string">"messages"</span>: [response, ToolMessage(tool_output, tool_call_id=response.tool_calls[<span class="token number">0</span>].id)]}
+        <span class="token keyword">else</span>:
+            <span class="token keyword">return</span> {<span class="token string">"messages"</span>: [response]}
+
+agent_a_node = AgentA(agent_a_llm, agent_a_tools)
+
+<span class="token comment"># Define LangGraph workflow for Agent A</span>
+workflow_a = StateGraph(AgentAState)
+workflow_a.add_node(<span class="token string">"agent_a"</span>, agent_a_node)
+workflow_a.set_entry_point(<span class="token string">"agent_a"</span>)
+
+<span class="token keyword">def</span> <span class="token function">should_continue_a</span>(state: AgentAState):
+    messages = state[<span class="token string">"messages"</span>]
+    last_message = messages[-<span class="token number">1</span>]
+    <span class="token keyword">if</span> <span class="token keyword">isinstance</span>(last_message, AIMessage) <span class="token keyword">and</span> last_message.tool_calls:
+        <span class="token keyword">return</span> <span class="token string">"agent_a"</span>
+    <span class="token keyword">else</span>:
+        <span class="token keyword">return</span> END
+
+workflow_a.add_conditional_edges(
+    <span class="token string">"agent_a"</span>,
+    should_continue_a,
+    {
+        <span class="token string">"agent_a"</span>: <span class="token string">"agent_a"</span>,
+        END: END
+    }
+)
+app_a = workflow_a.compile()
+
+<span class="token comment"># Example Usage of Agent A calling Agent B (simulated)</span>
+<span class="token keyword">if</span> __name__ == <span class="token string">"__main__"</span>:
+    print(<span class="token string">"\n--- Agent A (Customer Service) calling Agent B (Tech Support) ---"</span>)
+    user_query_a2a = <span class="token string">"I have a technical problem: My home internet is not working."</span>
+    inputs_a2a = {<span class="token string">"messages"</span>: [HumanMessage(content=user_query_a2a)]}
+    <span class="token keyword">for</span> s <span class="token keyword">in</span> app_a.stream(inputs_a2a):
+        print(s)
+    print(<span class="token string">"\nFinal Agent A Response after consulting Agent B:"</span>, s[END][<span class="token string">'messages'</span>][-<span class="token number">1</span>].content)
+</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.content-section');
+
+            function updateActiveState() {
+                let currentHash = window.location.hash || '#introduction';
+                
+                navLinks.forEach(link => {
+                    if (link.getAttribute('href') === currentHash) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+
+                sections.forEach(section => {
+                    if ('#' + section.id === currentHash) {
+                        section.classList.add('active');
+                    } else {
+                        section.classList.remove('active');
+                    }
+                });
+            }
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    history.pushState(null, '', this.getAttribute('href'));
+                    updateActiveState();
+                });
+            });
+
+            window.addEventListener('popstate', updateActiveState);
+
+            // Initial load
+            updateActiveState();
+
+            // Big picture diagram interactivity
+            const diagramItems = document.querySelectorAll('.diagram-item');
+            const infoBox = document.getElementById('diagram-info-box');
+            const diagramInfos = {
+                'user-info': 'The user initiates a request or conversation.',
+                'agent-info': 'The LangGraph agent receives the request and orchestrates the response.',
+                'llm-info': 'The agent uses a Large Language Model for reasoning, understanding, and generating text.',
+                'tool-info': 'The agent can use MCP Tools to perform actions or fetch data from external systems.'
+            };
+            
+            diagramItems.forEach(item => {
+                item.addEventListener('mouseover', () => {
+                    infoBox.textContent = diagramInfos[item.dataset.info];
+                });
+                item.addEventListener('mouseout', () => {
+                    infoBox.textContent = 'Hover over a component to learn more.';
+                });
+            });
+
+            // Agent flow animation
+            const agentFlowBtn = document.getElementById('agent-flow-btn');
+            const flowSteps = document.querySelectorAll('.flow-step');
+            const flowArrows = document.querySelectorAll('.flow-arrow');
+            let currentStep = 0;
+
+            agentFlowBtn.addEventListener('click', () => {
+                if(agentFlowBtn.textContent.includes('Reset')) {
+                    currentStep = 0;
+                    flowSteps.forEach(s => s.classList.remove('active'));
+                    flowArrows.forEach(a => a.classList.remove('active'));
+                    agentFlowBtn.textContent = 'Start Animation';
+                    return;
+                }
+
+                if (currentStep < flowSteps.length) {
+                    flowSteps[currentStep].classList.add('active');
+                    if (currentStep > 0) {
+                        flowArrows[currentStep - 1].classList.add('active');
+                    }
+                    currentStep++;
+                    agentFlowBtn.textContent = currentStep === flowSteps.length ? 'Reset Animation' : `Next Step (${currentStep}/${flowSteps.length})`;
+                }
+            });
+
+            // Gemini API Integration - Get LLM Response
+            const llmPromptInput = document.getElementById('llm-prompt-input');
+            const getLlmResponseBtn = document.getElementById('get-llm-response-btn');
+            const llmResponseOutput = document.getElementById('llm-response-output');
+            const llmLoadingSpinner = document.getElementById('llm-loading-spinner');
+
+            getLlmResponseBtn.addEventListener('click', async () => {
+                const prompt = llmPromptInput.value.trim();
+                if (!prompt) {
+                    llmResponseOutput.textContent = 'Please enter a prompt.';
+                    return;
+                }
+
+                llmResponseOutput.textContent = '';
+                llmLoadingSpinner.classList.remove('hidden');
+                getLlmResponseBtn.disabled = true;
+
+                try {
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        llmResponseOutput.textContent = result.candidates[0].content.parts[0].text;
+                    } else {
+                        llmResponseOutput.textContent = 'Error: Could not get a valid response from the LLM.';
+                        console.error('LLM response structure unexpected:', result);
+                    }
+                } catch (error) {
+                    llmResponseOutput.textContent = `Error: ${error.message}. Please try again.`;
+                    console.error('Error calling Gemini API:', error);
+                } finally {
+                    llmLoadingSpinner.classList.add('hidden');
+                    getLlmResponseBtn.disabled = false;
+                }
+            });
+
+            // Gemini API Integration - Generate Tool Description
+            const toolPurposeInput = document.getElementById('tool-purpose-input');
+            const generateToolDescriptionBtn = document.getElementById('generate-tool-description-btn');
+            const toolDescriptionOutput = document.getElementById('tool-description-output');
+            const toolLoadingSpinner = document.getElementById('tool-loading-spinner');
+
+            generateToolDescriptionBtn.addEventListener('click', async () => {
+                const purpose = toolPurposeInput.value.trim();
+                if (!purpose) {
+                    toolDescriptionOutput.textContent = 'Please describe the tool\'s purpose.';
+                    return;
+                }
+
+                toolDescriptionOutput.textContent = '';
+                toolLoadingSpinner.classList.remove('hidden');
+                generateToolDescriptionBtn.disabled = true;
+
+                try {
+                    const prompt = `Generate a LangChain-style tool description (name, args with types and descriptions, and overall description) for a tool that: ${purpose}. Format it as a Python function docstring, including a brief example of how it might be used.`;
+                    
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        toolDescriptionOutput.textContent = result.candidates[0].content.parts[0].text;
+                    } else {
+                        toolDescriptionOutput.textContent = 'Error: Could not generate tool description.';
+                        console.error('LLM response structure unexpected:', result);
+                    }
+                } catch (error) {
+                    toolDescriptionOutput.textContent = `Error: ${error.message}. Please try again.`;
+                    console.error('Error calling Gemini API:', error);
+                } finally {
+                    toolLoadingSpinner.classList.add('hidden');
+                    generateToolDescriptionBtn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
