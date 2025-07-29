@@ -1,0 +1,32 @@
+sequenceDiagram
+    participant User
+    participant WatchOverApp
+    participant AuthService
+    participant A2A_Agent
+    participant MCP_Server
+    participant Tool
+
+    User->>WatchOverApp: Submit credentials
+    WatchOverApp->>AuthService: Authenticate user
+    AuthService-->>WatchOverApp: Return user entitlements
+    WatchOverApp-->>User: Display available agents & entitlements
+    User->>WatchOverApp: Select agent & required entitlements
+    WatchOverApp->>AuthService: Generate OAuth Access Token (with entitlements)
+    AuthService-->>WatchOverApp: Return Access Token
+    WatchOverApp-->>User: Provide Access Token
+
+    User->>A2A_Agent: JSON-RPC request (with Access Token in headers)
+    A2A_Agent->>A2A_Agent: Validate entitlements in token
+    A2A_Agent->>MCP_Server: Call tool endpoint (with Access Token in headers)
+
+    MCP_Server->>MCP_Server: Validate Access Token
+    MCP_Server->>Tool: Check tool's entitlement list
+    alt Entitlement Match
+        Tool-->>MCP_Server: Execute tool
+        MCP_Server-->>A2A_Agent: Return success response
+        A2A_Agent-->>User: Return result
+    else Entitlement Mismatch
+        Tool-->>MCP_Server: Reject execution
+        MCP_Server-->>A2A_Agent: Return error: Unauthorized
+        A2A_Agent-->>User: Return error: Tool not allowed
+    end
