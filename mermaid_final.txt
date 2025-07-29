@@ -1,0 +1,129 @@
+Certainly! Here's a breakdown of each of the six segments from your system flow. Each section includes:
+
+* ✅ A **Title**
+* 📘 A **Crisp Explanation**
+* 🧩 A **Mermaid snippet** of the relevant portion of the sequence diagram
+
+---
+
+### 1. ✅ **User Authentication & Token Generation via Ping (OAuth)**
+
+📘 **Explanation:**
+The user initiates authentication via Overwatch. Overwatch forwards the request to the authentication service Ping, which validates credentials, resolves entitlements, and issues an OAuth access token that encodes the user's access entitlements.
+
+🧩 **Mermaid Snippet:**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Overwatch
+    participant Ping
+
+    User->>Overwatch: Submit credentials
+    Overwatch->>Ping: Authenticate user
+    Ping-->>Overwatch: Return user entitlements
+    Overwatch-->>User: Display agents & entitlements
+    User->>Overwatch: Select agent & entitlements
+    Overwatch->>Ping: Generate OAuth Token
+    Ping-->>Overwatch: Return Access Token
+    Overwatch-->>User: Provide Access Token
+```
+
+---
+
+### 2. ✅ **Connecting to A2A Agent Using the Access Token**
+
+📘 **Explanation:**
+The user, now holding a valid OAuth token, initiates a JSON-RPC request to the A2A Agent. The token is sent in the HTTP headers and acts as proof of identity and entitlement scope.
+
+🧩 **Mermaid Snippet:**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant A2A_Agent
+
+    User->>A2A_Agent: JSON-RPC request (Access Token in headers)
+```
+
+---
+
+### 3. ✅ **Agent-Side Entitlement Validation**
+
+📘 **Explanation:**
+The A2A Agent parses the received token to extract entitlement information. It verifies whether the user has permissions to invoke the requested capability or tool.
+
+🧩 **Mermaid Snippet:**
+
+```mermaid
+sequenceDiagram
+    participant A2A_Agent
+
+    A2A_Agent->>A2A_Agent: Decode & validate token entitlements
+```
+
+---
+
+### 4. ✅ **Agent Makes HTTP Call to MCP Server with Token**
+
+📘 **Explanation:**
+Upon validating the token, the A2A Agent initiates a service call to the MCP Server using HTTP. The same token is forwarded in the header to retain the user's context and entitlements.
+
+🧩 **Mermaid Snippet:**
+
+```mermaid
+sequenceDiagram
+    participant A2A_Agent
+    participant MCP_Server
+
+    A2A_Agent->>MCP_Server: HTTP request (with Access Token in headers)
+```
+
+---
+
+### 5. ✅ **Entitlement Validation at the MCP Server**
+
+📘 **Explanation:**
+The MCP Server first verifies the token’s authenticity and expiration. It then inspects the entitlement list within the token to determine whether the user is authorized to access the requested tool.
+
+🧩 **Mermaid Snippet:**
+
+```mermaid
+sequenceDiagram
+    participant MCP_Server
+    participant Tool
+
+    MCP_Server->>MCP_Server: Validate Access Token
+    MCP_Server->>Tool: Check if entitlement is allowed
+```
+
+---
+
+### 6. ✅ **Tool Execution or Rejection Based on Entitlement**
+
+📘 **Explanation:**
+If the entitlement check passes, the tool executes and a successful response is returned. Otherwise, the execution is blocked and an error message is sent indicating lack of access.
+
+🧩 **Mermaid Snippet:**
+
+```mermaid
+sequenceDiagram
+    participant Tool
+    participant MCP_Server
+    participant A2A_Agent
+    participant User
+
+    alt Entitlement Match
+        Tool-->>MCP_Server: Execute tool
+        MCP_Server-->>A2A_Agent: Return success
+        A2A_Agent-->>User: Return result
+    else Entitlement Mismatch
+        Tool-->>MCP_Server: Reject
+        MCP_Server-->>A2A_Agent: Error: Unauthorized
+        A2A_Agent-->>User: Error: Tool not allowed
+    end
+```
+
+---
+
+Let me know if you'd like a combined diagram with annotation or want these broken into documentation slides/pages.
