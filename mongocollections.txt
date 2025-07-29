@@ -1,0 +1,150 @@
+Great observation — you're absolutely right. In a NoSQL design, we want to avoid any ambiguity in mapping nested arrays, especially when different subfields (like data_source) relate to specific items (like tools). To fix this, we'll flatten these relationships and keep 1:1 clarity by using embedded objects instead of parallel arrays.
+
+Here's an updated, clean and dependency-free NoSQL structure:
+
+
+---
+
+✅ Revised MongoDB Collections Design
+
+
+---
+
+🔹 1. agents_registry
+
+Each agent has independent tool references with metadata and capabilities clearly mapped.
+
+{
+  "_id": "AGENT0001",
+  "name": "ClassifierAgent",
+  "description": "Classifies SNOW incidents",
+  "tools_used": [
+    {
+      "tool_id": "TOOL0001",
+      "usage": "incident_classification"
+    },
+    {
+      "tool_id": "TOOL0003",
+      "usage": "incident_triaging"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "CAP001",
+      "name": "SNOW Incident Classification"
+    },
+    {
+      "id": "CAP003",
+      "name": "SNOW incident triaging"
+    }
+  ],
+  "implemented_by": {
+    "team": "Platform X",
+    "language": "Python",
+    "endpoint": "server-x/agent/classifier"
+  },
+  "version": "v1.0.1",
+  "status": "active"
+}
+
+
+---
+
+🔹 2. tools_registry
+
+Each tool is self-contained, with its own data source and MCP server ID, clearly separated.
+
+{
+  "_id": "TOOL0001",
+  "name": "SNOWIncidentClassifier",
+  "description": "Classifies SNOW incidents",
+  "mcp_server_id": "MCP0001",
+  "data_source_used": ["SNOW API"],
+  "capabilities": [
+    {
+      "id": "CAP001",
+      "name": "SNOW Incident Classification"
+    }
+  ],
+  "agents_supported": ["AGENT0001"],
+  "implemented_by": {
+    "team": "Platform X",
+    "language": "Python",
+    "endpoint": "server-x/tool/classifier"
+  },
+  "version": "v1.1.0",
+  "status": "active",
+  "signature_required": true,
+  "iam_policy": "iam-policy-x"
+}
+
+
+---
+
+🔹 3. mcp_servers
+
+Each document represents a single MCP server, and no tools are nested here (to avoid unclear mappings).
+
+{
+  "_id": "MCP0001",
+  "name": "TriageServer",
+  "description": "Handles classification and triaging",
+  "auth_required": true,
+  "status": "active",
+  "version": "v1.0.2"
+}
+
+> Tools now reference the MCP server by mcp_server_id, enabling 1:1 traceability without nested ambiguity.
+
+
+
+
+---
+
+🔹 4. capabilities (optional if not embedded)
+
+Only use this collection if capabilities evolve independently or are reused frequently.
+
+{
+  "_id": "CAP001",
+  "name": "SNOW Incident Classification",
+  "description": "Classification of SNOW tickets",
+  "version": "v1.0",
+  "status": "active"
+}
+
+
+---
+
+🔹 5. governance_policies
+
+Same as before, this tracks all governance actions and metadata.
+
+{
+  "_id": "POLICY0001",
+  "category": "Versioning",
+  "description": "All changes to agents/tools must be versioned and tracked",
+  "applies_to": ["agents", "tools"],
+  "created_by": "admin",
+  "created_at": "2025-07-29T12:00:00Z"
+}
+
+
+---
+
+✅ Summary: What Changed
+
+Concern	Fix
+
+Shared arrays causing ambiguity	Replaced with object-based mappings (tools_used, capabilities)
+Tools inside MCP server	Removed; now tools reference mcp_server_id directly
+Data source per tool	Stored inside each tool record
+One-to-many traceability	Maintained using ID references
+Clean separation	No embedded arrays with unrelated elements
+
+
+
+---
+
+Would you like help generating initial sample insert scripts (in JSON) or MongoDB schema validation rules for these collections?
+
