@@ -1,0 +1,76 @@
+{
+  "name": "NewsRetrievalAndSummarizationGraph",
+  "id": "graph_news_summary_connected",
+  "nodes": [
+    {
+      "name": "news_retriever",
+      "id": "node_retrieve_news",
+      "system_instruction": "If user asks for news, use the appropriate tool to fetch news articles for the requested category. Use MCP for internet search, and Python tool for internal news API.",
+      "model_id": "gemini_flash_model",
+      "tools": ["internal_news_api"],
+      "mcp_tools": ["web_news_search"],
+      "output_key": "news_list"
+    },
+    {
+      "name": "news_summarizer",
+      "id": "node_summarize_news",
+      "system_instruction": "Summarize the given list of news articles into a short paragraph.",
+      "model_id": "gemini_flash_model",
+      "tools": [],
+      "mcp_tools": [],
+      "output_key": "news_summary"
+    }
+  ],
+  "edges": [
+    "edge_retrieve_to_summarize"
+  ],
+  "normal_edges": [
+    {
+      "edge_id": "edge_retrieve_to_summarize",
+      "from": "node_retrieve_news",
+      "to": "node_summarize_news"
+    }
+  ],
+  "conditional_edges": [],
+  "models": [
+    {
+      "model_name": "Gemini Flash",
+      "model_id": "gemini_flash_model",
+      "temparature": 0.4,
+      "top_k": 50,
+      "top_p": 0.9
+    }
+  ],
+  "python_tools": [
+    {
+      "tool_id": "internal_news_api",
+      "tool_name": "Internal News API",
+      "tool_definition": "def get_internal_news(category: str) -> List[str]:\n    # Simulate API call\n    return [f'Internal news headline for {category} 1', f'Internal news headline for {category} 2']"
+    }
+  ],
+  "mcp_tools": [
+    {
+      "mcp_server_id": "web_news_search",
+      "mcp_server_name": "Web News Search Agent",
+      "mcp_start_command": "python run_web_search_agent.py",
+      "mcp_server_params": {
+        "SEARCH_API_KEY": "your_api_key",
+        "SEARCH_ENGINE": "google"
+      }
+    }
+  ],
+  "state_keys": [
+    {
+      "key_name": "news_list",
+      "key_type": "str"
+    },
+    {
+      "key_name": "news_summary",
+      "key_type": "str"
+    },
+    {
+      "key_name": "user_query",
+      "key_type": "str"
+    }
+  ]
+}
