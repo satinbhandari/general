@@ -1,47 +1,66 @@
-flowchart LR
+flowchart TB
 
-%% ========== CLIENT ==========
-U[User / External System]
+%% ===================== USERS =====================
+U[External Clients<br/>Users / Systems]
 
-%% ========== ENTRY ==========
-U -->|Request| GW[Tawk Gateway<br/>A2A Endpoint]
-
-%% ========== CORE ==========
-GW --> AUTH[Auth & Authorization]
-GW --> TRACE[Traceability / Audit]
-GW --> REDIS[Redis Memory Manager]
-GW --> HEALTH[Health Check API]
-
-%% ========== ORCHESTRATION ==========
-GW --> ORCH[Orchestrator Agent<br/>(Multi-Agent Controller)]
-
-%% ========== AGENT FABRIC ==========
-subgraph A2A_FABRIC["TAWK A2A Fabric"]
-    ORCH -->|A2A Call| AG1[Worker Agent A]
-    ORCH -->|A2A Call| AG2[Worker Agent B]
-    ORCH -->|A2A Call| AG3[Worker Agent C]
+%% ===================== ACCESS LAYER =====================
+subgraph ACCESS["Access & Control Layer"]
+    GW[Tawk Gateway<br/>(A2A Endpoint)]
+    AUTH[Authentication & Authorization]
+    TRACE[Traceability / Audit]
+    HEALTH[Health Check API]
 end
 
-%% ========== HANDLERS ==========
-AG1 --> H1[HITL Handler]
-AG2 --> H2[Clean State Handler]
-AG3 --> H3[Auto Register]
+U --> GW
+GW --> AUTH
+GW --> TRACE
+GW --> HEALTH
 
-%% ========== MCP / DISCOVERY ==========
-ORCH --> MCP[MCP Server<br/>Agent Registry & Discovery]
+%% ===================== PLATFORM CORE =====================
+subgraph CORE["TAWK Platform Core"]
+    ORCH[Orchestrator Agent]
+    REDIS[Redis Memory Manager]
+    FUP[Follow-up Conversation Engine]
+end
 
-%% ========== FOLLOW-UP ==========
-ORCH --> FUP[Follow-Up Conversation Engine]
+GW --> ORCH
+ORCH --> REDIS
+ORCH --> FUP
 
-%% ========== MEMORY ==========
+%% ===================== A2A FABRIC =====================
+subgraph FABRIC["A2A Agent Fabric"]
+    AG1[Worker Agent A]
+    AG2[Worker Agent B]
+    AG3[Worker Agent C]
+end
+
+ORCH -->|A2A Protocol| AG1
+ORCH -->|A2A Protocol| AG2
+ORCH -->|A2A Protocol| AG3
+
+%% ===================== HANDLER LAYER =====================
+subgraph HANDLERS["Execution & Governance"]
+    HITL[Human-in-the-Loop]
+    CLEAN[Clean State Manager]
+    AUTO[Auto Registration]
+end
+
+AG1 --> HITL
+AG2 --> CLEAN
+AG3 --> AUTO
+
+%% ===================== MCP =====================
+subgraph MCP_LAYER["MCP / Agent Registry"]
+    MCP[MCP Server<br/>Discovery & Capability Index]
+end
+
+ORCH --> MCP
+AG1 --> MCP
+AG2 --> MCP
+AG3 --> MCP
+
+%% ===================== MEMORY & TRACE =====================
+REDIS --> TRACE
 AG1 --> REDIS
 AG2 --> REDIS
 AG3 --> REDIS
-ORCH --> REDIS
-
-%% ========== TRACE ==========
-GW --> TRACE
-ORCH --> TRACE
-AG1 --> TRACE
-AG2 --> TRACE
-AG3 --> TRACE
